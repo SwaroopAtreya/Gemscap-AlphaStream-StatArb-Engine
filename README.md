@@ -1,76 +1,67 @@
-⚡ AlphaStream: Real-Time Statistical Arbitrage Engine
+# ⚡ AlphaStream: Real-Time Statistical Arbitrage Engine
 
-AlphaStream is a production-grade Quantitative Analytics dashboard designed to ingest real-time Binance Futures data, calculate co-integration metrics (Spread, Z-Score, Beta) on the fly, and visualize arbitrage opportunities.
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+APP URL - https://gemscap-aplhastream-startarb-engine.streamlit.app/
+
+**AlphaStream** is a production-grade Quantitative Analytics dashboard designed to ingest real-time Binance Futures data, calculate co-integration metrics (Spread, Z-Score, Beta) on the fly, and visualize arbitrage opportunities.
 
 This application serves as a prototype for an end-to-end quantitative trading monitor, featuring a loosely coupled architecture that separates data ingestion (WebSocket) from computation (Analytics Engine) and visualization (Streamlit).
 
-🚀 Key Features
+---
 
-📡 Multi-Mode Ingestion
+## 🚀 Key Features
 
-Live Stream: Consumes real-time aggTrade streams from Binance Futures via WebSocket.
+### 📡 Multi-Mode Ingestion
+* **Live Stream**: Consumes real-time `aggTrade` streams from Binance Futures via WebSocket.
+* **Historical Mode**: Upload CSV files (OHLCV or tick data) for backtesting and static analysis.
 
-Historical Mode: Upload CSV files (OHLCV or tick data) for backtesting and static analysis.
+### 🧠 Advanced Analytics (Quant Engine)
+* **OLS (Ordinary Least Squares)**: Standard static hedge ratio estimation.
+* **Kalman Filter (Bonus)**: Dynamic, adaptive beta estimation for volatile regimes.
+* **Robust Regression (Bonus)**: Huber-loss based rolling regression to mitigate the impact of price outliers.
+* **Market Microstructure**: Real-time liquidity and volume profile monitoring.
+* **Risk Management**: Automated stationarity tests (ADF) and Z-Score alerting.
 
-🧠 Advanced Analytics (Quant Engine)
+### 📊 Interactive Dashboard
+* **Real-time Visualization**: Dynamic Plotly charts updating <500ms latency.
+* **Progressive Loading**: Immediate price rendering while statistical models calibrate.
+* **Trader Tools**: Configurable lookback windows, Z-score thresholds, and alert triggers.
+* **Data Export**: Download processed analytics and resampled datasets as CSV.
 
-OLS (Ordinary Least Squares): Standard static hedge ratio estimation.
+---
 
-Kalman Filter (Bonus): Dynamic, adaptive beta estimation for volatile regimes.
+## 🏗️ Architecture & Design
 
-Robust Regression (Bonus): Huber-loss based rolling regression to mitigate the impact of price outliers.
+### High-Level Overview
+The system follows a **Producer-Consumer** pattern decoupled by a thread-safe storage layer.
 
-Market Microstructure: Real-time liquidity and volume profile monitoring.
+![Architecture Diagram](architecture.png)
 
-Risk Management: Automated stationarity tests (ADF) and Z-Score alerting.
+1.  **Ingest Service (Producer)**: A background daemon thread connects to Binance WebSockets, normalizing raw JSON ticks into structured data.
+2.  **Storage Layer (Buffer)**: 
+    * **Hot Path**: `deque` ring-buffer for O(1) recent access (critical for live analytics).
+    * **Persistence**: Asynchronous writes to SQLite (WAL mode) for historical resampling.
+3.  **Quant Engine (Consumer)**: Vectorized pandas/numpy operations compute rolling statistics on the "Hot Path" data.
+4.  **Frontend (UI)**: Streamlit polls the storage layer, triggering the Quant Engine only when new data renders.
 
-📊 Interactive Dashboard
+### Design Decisions & Trade-offs
+* **Streamlit vs. React**: Streamlit was chosen for rapid prototyping and Python-native integration, allowing us to focus on analytics correctness. **Trade-off**: Lower UI customizability compared to React/Dash.
+* **SQLite vs. TimeSeriesDB**: SQLite is serverless and sufficient for single-day high-frequency data. **Trade-off**: For multi-day, terabyte-scale storage, this would be replaced by KDB+ or TimescaleDB.
+* **Hybrid Storage**: We use in-memory buffers for calculation speed and disk storage for safety. This minimizes I/O latency during the critical rendering loop.
 
-Real-time Visualization: Dynamic Plotly charts updating <500ms latency.
-
-Progressive Loading: Immediate price rendering while statistical models calibrate.
-
-Trader Tools: Configurable lookback windows, Z-score thresholds, and alert triggers.
-
-Data Export: Download processed analytics and resampled datasets as CSV.
-
-🏗️ Architecture & Design
-
-High-Level Overview
-
-The system follows a Producer-Consumer pattern decoupled by a thread-safe storage layer.
-
-Ingest Service (Producer): A background daemon thread connects to Binance WebSockets, normalizing raw JSON ticks into structured data.
-
-Storage Layer (Buffer):
-
-Hot Path: deque ring-buffer for O(1) recent access (critical for live analytics).
-
-Persistence: Asynchronous writes to SQLite (WAL mode) for historical resampling.
-
-Quant Engine (Consumer): Vectorized pandas/numpy operations compute rolling statistics on the "Hot Path" data.
-
-Frontend (UI): Streamlit polls the storage layer, triggering the Quant Engine only when new data renders.
-
-Design Decisions & Trade-offs
-
-Streamlit vs. React: Streamlit was chosen for rapid prototyping and Python-native integration, allowing us to focus on analytics correctness. Trade-off: Lower UI customizability compared to React/Dash.
-
-SQLite vs. TimeSeriesDB: SQLite is serverless and sufficient for single-day high-frequency data. Trade-off: For multi-day, terabyte-scale storage, this would be replaced by KDB+ or TimescaleDB.
-
-Hybrid Storage: We use in-memory buffers for calculation speed and disk storage for safety. This minimizes I/O latency during the critical rendering loop.
-
-Scaling Discussion
-
+### Scaling Discussion
 If this were to move to a firm-wide production environment, the following changes would be made:
+1.  **Ingestion**: Move `ingest.py` to a separate microservice publishing to a low-latency bus (e.g., **Kafka** or **Redpanda**).
+2.  **Storage**: Replace SQLite with **KDB+** or **QuestDB** to handle billions of ticks efficiently.
+3.  **Compute**: Offload heavy math (Kalman Filters) to a compiled backend (C++/Rust) exposed via Python bindings.
 
-Ingestion: Move ingest.py to a separate microservice publishing to a low-latency bus (e.g., Kafka or Redpanda).
+---
 
-Storage: Replace SQLite with KDB+ or QuestDB to handle billions of ticks efficiently.
+## 📂 Project Structure
 
-Compute: Offload heavy math (Kalman Filters) to a compiled backend (C++/Rust) exposed via Python bindings.
-
-📂 Project Structure
 
 project/
 │── app.py             # Frontend entry point (Streamlit)
