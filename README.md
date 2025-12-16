@@ -6,6 +6,8 @@ A production-grade Quantitative Analytics dashboard designed to ingest real-time
 
 This application serves as a prototype for an end-to-end quantitative trading monitor. It features a loosely coupled architecture separating data ingestion (WebSocket) from computation (Analytics Engine) and visualization (Streamlit).
 
+APP URL - https://gemscap-aplhastream-startarb-engine.streamlit.app/
+
 Key Features
 
 Multi-Mode Ingestion:
